@@ -2,11 +2,18 @@ from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, DateT
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 from datetime import datetime
 
-DATABASE_URL = "sqlite:///./enterprise_secure.db"
+import os
+
+# Use environment variable for database URL (PostgreSQL on Render, or fallback to SQLite)
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./enterprise_secure.db")
+
+# Fix for Render's PostgreSQL URL which starts with postgres:// but SQLAlchemy requires postgresql://
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False}
+    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
 )
 
 SessionLocal = sessionmaker(bind=engine)

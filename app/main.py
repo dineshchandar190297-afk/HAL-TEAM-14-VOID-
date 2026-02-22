@@ -123,7 +123,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(),
     user.failed_login_attempts = 0
     user.last_login = datetime.utcnow()
     db.commit()
-    send_login_success_email(user.email, user.username)
+    send_login_success_email(user.email, user.username, method="Password + TOTP" if user.totp_enabled else "Password")
     token = create_access_token(data={"sub": user.username})
     add_block(db, user.username, "LOGIN", "JWT + 2FA authentication successful" if user.totp_enabled else "JWT authentication successful")
     return {"access_token": token, "token_type": "bearer", "totp_enabled": bool(user.totp_enabled)}
@@ -174,8 +174,7 @@ async def face_login(req: FaceLoginRequest, db: Session = Depends(get_db)):
                 user.last_login = datetime.utcnow()
                 db.commit()
                 
-                if user.email:
-                    send_login_success_email(user.email, user.username)
+                send_login_success_email(user.email, user.username, method="Face ID (Biometric)")
                 
                 token = create_access_token(data={"sub": user.username})
                 add_block(db, user.username, "FACE_LOGIN", f"Biometric verification successful (conf: {round(confidence, 2)})")
@@ -188,6 +187,7 @@ async def face_login(req: FaceLoginRequest, db: Session = Depends(get_db)):
                 }
         
         # If we reached here, face was detected but confidence was too high (bad match)
+        send_failed_login_email(None, req.username or "unknown", 1, image_data=req.image) # Alert with photo on biometric mismatch
         raise HTTPException(status_code=401, detail="Face ID didn't match. Biometric verification failed.")
 
     except Exception as e:

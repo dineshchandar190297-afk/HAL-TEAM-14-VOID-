@@ -1239,8 +1239,13 @@
     </div>
 
     <script>
+        // IMPORTANT: Change this to your Render backend URL after deployment
+        // Example: var API = "https://your-backend.onrender.com";
         var API = window.location.origin;
-        if (API === "null" || API.indexOf("file://") === 0) API = "http://127.0.0.1:8000";
+        if (API === "null" || API.indexOf("file://") === 0 || API.includes("vercel.app")) {
+            // Default to localhost during development or placeholders
+            API = "http://127.0.0.1:8000"; 
+        }
         var TK = null, AES_KEY = null, HMAC_KEY = null, charts = {};
         var AES_HEX = "a0f1f1574cdca14f8822063eff630361aec5beec3b3c6c6bf7f29214683b33c7";
         var HMAC_HEX = "78e670e84ac5a9d52b8662aa74dbec8db961d38f71c18da76b720c5faf05b43e";
