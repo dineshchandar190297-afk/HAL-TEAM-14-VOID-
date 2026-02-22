@@ -1059,7 +1059,8 @@
                             style="color:#fff;animation: pulse 2s infinite;"></i> Search Secured Records</h2>
                     <p>Matches are found using high-entropy HMAC tokens. Zero plaintext exposed.</p>
                     <div class="search-wrap"><i class="fa-solid fa-magnifying-glass"></i><input id="qIn"
-                            placeholder="Search by Name, City, or Prefix... (e.g. Pri, Mum, Sar)" autocomplete="off">
+                            placeholder="Search by Name, City, or Initial letter... (e.g. A, P, Mum)"
+                            autocomplete="off">
                     </div>
                     <div style="margin-top:1.5rem;display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
                         <span
@@ -1095,7 +1096,7 @@
                         <tbody id="resBody">
                             <tr>
                                 <td colspan="5" style="text-align:center;padding:3rem;color:var(--muted);">Enter a
-                                    search query above (min 3 characters)</td>
+                                    search query above (even a single letter)</td>
                             </tr>
                         </tbody>
                     </table>
@@ -1251,7 +1252,7 @@
             TK = localStorage.getItem('hal4_tk');
             if (TK) initApp();
             var qInput = document.getElementById('qIn');
-            if (qInput) { var t = null; qInput.addEventListener('keyup', function () { clearTimeout(t); var v = qInput.value; t = setTimeout(function () { doSearch(v); }, 500); }); }
+            if (qInput) { var t = null; qInput.addEventListener('keyup', function () { clearTimeout(t); var v = qInput.value; t = setTimeout(function () { doSearch(v); }, 300); }); }
         });
 
         function decryptField(b64) { try { var raw = CryptoJS.enc.Base64.parse(b64); var iv = CryptoJS.lib.WordArray.create(raw.words.slice(0, 4), 16); var ct = CryptoJS.lib.WordArray.create(raw.words.slice(4), raw.sigBytes - 16); return CryptoJS.AES.decrypt({ ciphertext: ct }, AES_KEY, { iv: iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 }).toString(CryptoJS.enc.Utf8); } catch (e) { return "[encrypted]"; } }
@@ -1662,7 +1663,7 @@
         }
 
         function doSearch(q) {
-            if (!q || q.length < 3) return;
+            if (!q || q.length < 1) return;
             var errBox = document.getElementById('searchError'); errBox.style.display = 'none';
             var box = document.getElementById('tokenBox'); box.style.display = 'block';
             try { var token = genToken(q); box.innerText = "[SECURE PROTOCOL] HMAC-SHA256 Blind Search\n> INPUT: \"" + q + "\"\n> HMAC_KEY: " + HMAC_HEX.substring(0, 16) + "... (256-bit)\n> TOKEN: " + token.substring(0, 48) + "...\n> STATUS: Querying encrypted index..."; } catch (e) { errBox.style.display = 'block'; errBox.innerText = "Token error: " + e.message; return; }

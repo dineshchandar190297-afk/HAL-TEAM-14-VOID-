@@ -42,10 +42,12 @@ def generate_search_token(text: str) -> str:
 
 
 def generate_prefixes(text: str):
-    """Generate search tokens for the full word and all prefixes >= 3 chars"""
+    """Generate search tokens for the full word and all prefixes >= 1 chars"""
     clean = text.lower().strip()
+    if not clean:
+        return []
     tokens = [generate_search_token(clean)]
-    for i in range(3, len(clean)):
+    for i in range(1, len(clean)):
         tokens.append(generate_search_token(clean[:i]))
     return list(set(tokens))
 
