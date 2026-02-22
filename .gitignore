@@ -1,0 +1,30 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+venv/
+env/
+.devcontainer/
+.vscode/
+
+# Ignore sensitive database and keys
+enterprise_secure.db
+*.db
+*.sqlite3
+keys.txt
+
+# Ignore biometric models and training data for security (privacy)
+admin_face_model.yml
+admin_faces/
+
+# Backup/Log files
+*.log
+*.bak
+
+# Temporary/Test scripts
+test_email.py
+test_search.py
+verify.py
+print_keys.py
+server.log

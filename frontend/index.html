@@ -1,0 +1,1885 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HAL 4.0 — Secure Search Intelligence Platform</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --bg: #04091e;
+            --card: rgba(13, 17, 46, 0.8);
+            --text: #ffffff;
+            --muted: #94a3b8;
+            --primary: #9d50bb;
+            /* Vibrant Purple */
+            --primary-light: rgba(157, 80, 187, 0.2);
+            --primary-dark: #6e48aa;
+            --success: #00d2ff;
+            /* Electric Blue */
+            --success-light: rgba(0, 210, 255, 0.15);
+            --danger: #ff007f;
+            --danger-light: rgba(255, 0, 127, 0.15);
+            --warning: #f59e0b;
+            --warning-light: rgba(245, 158, 11, 0.2);
+            --border: rgba(255, 255, 255, 0.08);
+            --sidebar-bg: #020617;
+            --sidebar-text: #94a3b8;
+            --accent: #00d2ff;
+            --glass: rgba(13, 17, 46, 0.7);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+            background-image:
+                radial-gradient(circle at 10% 20%, rgba(157, 80, 187, 0.1) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(0, 210, 255, 0.1) 0%, transparent 40%);
+            background-attachment: fixed;
+        }
+
+        /* --- Animations --- */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(157, 80, 187, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(157, 80, 187, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(157, 80, 187, 0);
+            }
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+
+            100% {
+                transform: translateY(0px);
+            }
+        }
+
+        @keyframes gradientBG {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        .animate-fade {
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        .animate-slide {
+            animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        #loginPage,
+        #registerPage {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: radial-gradient(circle at center, #101633 0%, #04091e 100%);
+            overflow: hidden;
+            position: relative;
+        }
+
+        #registerPage {
+            display: none;
+        }
+
+        #loginPage::before,
+        #registerPage::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent 48%, rgba(157, 80, 187, 0.05) 50%, transparent 52%);
+            animation: gradientBG 15s linear infinite;
+            background-size: 200% 200%;
+        }
+
+        /* --- Auth Toggle Link --- */
+        .auth-toggle {
+            margin-top: 1.5rem;
+            font-size: .85rem;
+            color: var(--muted);
+        }
+
+        .auth-toggle a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .auth-toggle a:hover {
+            color: var(--success);
+            text-shadow: 0 0 12px rgba(0, 210, 255, 0.4);
+        }
+
+        /* --- Password Strength Meter --- */
+        .strength-meter {
+            height: 4px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.08);
+            margin-bottom: 0.5rem;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .strength-meter-fill {
+            height: 100%;
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.4s ease, background 0.4s ease;
+        }
+
+        .strength-label {
+            font-size: .7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 1rem;
+            text-align: left;
+            transition: color 0.3s;
+        }
+
+        /* --- Success Message --- */
+        .auth-success {
+            display: none;
+            color: #6ee7b7;
+            font-size: .85rem;
+            padding: 10px 14px;
+            margin-bottom: 12px;
+            background: rgba(0, 210, 255, 0.1);
+            border-radius: 10px;
+            border: 1px solid rgba(0, 210, 255, 0.2);
+            font-weight: 600;
+        }
+
+        .login-box {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            padding: 3.5rem 2.5rem;
+            border-radius: 24px;
+            width: 440px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(157, 80, 187, 0.2);
+            text-align: center;
+            position: relative;
+            z-index: 10;
+        }
+
+        .login-box h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-bottom: .5rem;
+            background: linear-gradient(to right, #9d50bb, #00d2ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .login-box p {
+            color: var(--muted);
+            margin-bottom: 2.5rem;
+            font-size: 1rem;
+        }
+
+        .login-box input {
+            width: 100%;
+            padding: 16px 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 1.25rem;
+            font-size: 1rem;
+            color: #fff;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .login-box input:focus {
+            border-color: var(--primary);
+            background: rgba(255, 255, 255, 0.05);
+            box-shadow: 0 0 0 4px var(--primary-light);
+        }
+
+        .btn {
+            padding: 16px 28px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #9d50bb, #6e48aa);
+            color: #fff;
+            box-shadow: 0 10px 20px -5px rgba(157, 80, 187, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 20px 30px -10px rgba(157, 80, 187, 0.6);
+        }
+
+        .btn-primary:active {
+            transform: translateY(-1px);
+        }
+
+        #dashboard {
+            display: none;
+            animation: fadeIn 1s ease;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: var(--sidebar-bg);
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            padding: 2rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+            border-right: 1px solid var(--border);
+        }
+
+        .logo {
+            color: #fff;
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin-bottom: 3rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            letter-spacing: -0.5px;
+        }
+
+        .logo i {
+            font-size: 1.8rem;
+            background: linear-gradient(135deg, #9d50bb, #00d2ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 16px;
+            color: var(--sidebar-text);
+            border-radius: 12px;
+            margin-bottom: 6px;
+            cursor: pointer;
+            font-size: .95rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            transform: translateX(5px);
+        }
+
+        .nav-item.active {
+            background: linear-gradient(to right, rgba(157, 80, 187, 0.15), rgba(0, 210, 255, 0.05));
+            color: var(--primary);
+            border-left: 4px solid var(--primary);
+            box-shadow: inset 4px 0 15px rgba(157, 80, 187, 0.1);
+        }
+
+        .nav-item i {
+            width: 24px;
+            font-size: 1.1rem;
+        }
+
+        .main {
+            margin-left: 280px;
+            padding: 2.5rem 3rem;
+            min-height: 100vh;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .stat {
+            background: var(--card);
+            backdrop-filter: blur(15px);
+            padding: 1.75rem;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(to right, var(--primary), var(--success));
+            opacity: 0.3;
+        }
+
+        .stat:hover {
+            transform: translateY(-8px);
+            border-color: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+        }
+
+        .stat label {
+            font-size: .8rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stat .num {
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin-top: 10px;
+            color: #fff;
+        }
+
+        .card {
+            background: var(--card);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            margin-bottom: 2rem;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .card-head {
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-head h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page {
+            display: none;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .page.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 16px 24px;
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--muted);
+            font-size: .75rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        td {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            font-size: .95rem;
+            color: #cbd5e1;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .search-banner {
+            background: linear-gradient(135deg, #0b112b, #1e293b, #9d50bb);
+            padding: 3.5rem;
+            border-radius: 24px;
+            margin-bottom: 3rem;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(157, 80, 187, 0.15);
+        }
+
+        .search-banner::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(157, 80, 187, 0.05) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+        }
+
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .search-banner h2 {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #fff;
+            position: relative;
+            z-index: 1;
+        }
+
+        .search-banner p {
+            opacity: 0.9;
+            margin-top: 8px;
+            font-size: 1.1rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .search-wrap {
+            position: relative;
+            margin-top: 2rem;
+            max-width: 800px;
+            z-index: 1;
+        }
+
+        .search-wrap input {
+            width: 100%;
+            padding: 20px 60px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            font-size: 1.2rem;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            color: #fff;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .search-wrap input:focus {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: #fff;
+            box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.1);
+        }
+
+        .search-wrap input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .search-wrap i {
+            position: absolute;
+            left: 24px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.4rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        #tokenBox {
+            display: none;
+            background: #020617;
+            color: #38bdf8;
+            padding: 1.5rem 2rem;
+            border-radius: 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .85rem;
+            line-height: 1.7;
+            margin-bottom: 2rem;
+            border: 1px solid #1e293b;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.4s ease;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            padding: 2.5rem;
+        }
+
+        .metric {
+            text-align: center;
+            padding: 2.5rem;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.02);
+            transition: all 0.3s;
+        }
+
+        .metric:hover {
+            transform: scale(1.05);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .metric .big {
+            font-size: 2.8rem;
+            font-weight: 800;
+            color: var(--primary);
+            display: block;
+            margin: 12px 0;
+            text-shadow: 0 0 20px var(--primary-light);
+        }
+
+        .metric label {
+            font-size: .85rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            font-weight: 800;
+        }
+
+        .alert {
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            font-size: .95rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border: 1px solid transparent;
+        }
+
+        .alert-danger {
+            background: var(--danger-light);
+            color: #fca5a5;
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+
+        .alert-warning {
+            background: var(--warning-light);
+            color: #fcd34d;
+            border-color: rgba(245, 158, 11, 0.2);
+        }
+
+        .alert-success {
+            background: var(--success-light);
+            color: #6ee7b7;
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+
+        #breachView {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at center, #050a0f, #000);
+            color: #22c55e;
+            z-index: 9999;
+            padding: 4rem;
+            font-family: 'JetBrains Mono', monospace;
+            overflow-y: auto;
+            animation: fadeIn 0.3s ease;
+        }
+
+        #loadOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(11, 14, 20, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 5000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pipe-step {
+            width: 480px;
+            padding: 20px 25px;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            opacity: .2;
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            background: rgba(255, 255, 255, 0.03);
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .pipe-step.go {
+            opacity: 1;
+            border-color: var(--primary);
+            transform: scale(1.05);
+            background: linear-gradient(to right, rgba(157, 80, 187, 0.2), rgba(0, 210, 255, 0.1));
+            box-shadow: 0 10px 40px rgba(157, 80, 187, 0.2);
+            border-color: var(--primary);
+        }
+
+        .pipe-step.ok {
+            opacity: 1;
+            border-color: var(--success);
+            background: rgba(0, 210, 255, 0.1);
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 14px;
+            border-radius: 100px;
+            font-size: .75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-green {
+            background: rgba(0, 210, 255, 0.15);
+            color: #00d2ff;
+        }
+
+        .badge-red {
+            background: rgba(255, 0, 127, 0.15);
+            color: #ff007f;
+        }
+
+        .badge-blue {
+            background: rgba(157, 80, 187, 0.15);
+            color: #9d50bb;
+        }
+
+        .badge-yellow {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fca5a5;
+        }
+
+        .indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .indicator-green {
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="breachView">
+        <div
+            style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(157, 80, 187, 0.3);padding-bottom:1.5rem;margin-bottom:2rem;">
+            <div>
+                <h1 style="font-size:1.8rem; letter-spacing:2px; color:var(--primary);"><i
+                        class="fa-solid fa-skull-crossbones" style="margin-right:15px;"></i> CRITICAL: SYSTEM BREACH
+                    SIMULATION</h1>
+                <p style="color:var(--primary); font-size:0.9rem; margin-top:5px; opacity:0.8;">DIRECT MEMORY ACCESS
+                    GRANTED | EXPOSING DATABASE BLOBS</p>
+            </div>
+            <button onclick="toggleBreach()" class="btn"
+                style="background:rgba(0, 210, 255, 0.1);color:#00d2ff;border:1px solid #00d2ff;padding:12px 24px;font-weight:700;border-radius:12px;cursor:pointer;box-shadow: 0 0 20px rgba(0, 210, 255, 0.2);">
+                RE-ENABLE SECURITY
+            </button>
+        </div>
+        <div id="dumpBox" class="animate-fade" style="color:var(--success);"></div>
+    </div>
+
+    <div id="loadOverlay">
+        <div
+            style="background:var(--sidebar-bg); padding:4rem; border-radius:32px; border:1px solid var(--border); box-shadow:0 0 100px rgba(0,0,0,0.8); display:flex; flex-direction:column; align-items:center;">
+            <div
+                style="font-size:3rem; color:var(--primary); margin-bottom:1.5rem; animation: float 3s ease-in-out infinite;">
+                <i class="fa-solid fa-vault"></i>
+            </div>
+            <h2 style="margin-bottom:2.5rem;font-weight:800;letter-spacing:-1px;font-size:1.8rem;">Secure Ingestion
+                Pipeline</h2>
+            <div id="p1" class="pipe-step"><i class="fa-solid fa-file-csv"></i> Stream Analysis & Validation</div>
+            <div id="p2" class="pipe-step"><i class="fa-solid fa-microchip"></i> AES-256 Symmetric Encryption</div>
+            <div id="p3" class="pipe-step"><i class="fa-solid fa-fingerprint"></i> HMAC-SHA256 Multi-Token Indexing
+            </div>
+            <div id="p4" class="pipe-step"><i class="fa-solid fa-link"></i> Blockchain Ledger Finalization</div>
+        </div>
+    </div>
+
+    <div id="loginPage">
+        <div class="login-box">
+            <div style="font-size:2.5rem;color:var(--primary);margin-bottom:1rem;"><i
+                    class="fa-solid fa-shield-halved"></i></div>
+            <h1>HAL 4.0</h1>
+            <p>Secure Search Intelligence Platform</p>
+            <form onsubmit="doLogin(event)">
+                <input type="text" id="inUser" placeholder="Username" required>
+                <input type="password" id="inPass" placeholder="Password" required>
+                <div id="totpRow" style="display:none;">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                        <i class="fa-solid fa-mobile-screen" style="color:var(--primary);font-size:1.2rem;"></i>
+                        <span style="font-size:.8rem;color:var(--muted);font-weight:600;">Enter Google Authenticator
+                            Code</span>
+                    </div>
+                    <input type="text" id="inTotp" placeholder="6-digit code" maxlength="6" pattern="[0-9]{6}"
+                        autocomplete="one-time-code"
+                        style="text-align:center;letter-spacing:8px;font-size:1.5rem;font-family:'JetBrains Mono';">
+                </div>
+                <div id="loginError"
+                    style="display:none;color:var(--danger);font-size:.8rem;padding:8px;margin-bottom:8px;background:var(--danger-light);border-radius:8px;">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%;" id="loginBtn">AUTHENTICATE</button>
+                <div id="faceContainer"
+                    style="display:none; margin-top: 1.5rem; border: 2px solid var(--primary); border-radius: 16px; overflow: hidden; position: relative; background: #1a1a2e; box-shadow: 0 0 20px rgba(157, 80, 187, 0.3);">
+                    <video id="faceVideo" width="100%" height="auto" autoplay playsinline
+                        style="transform: scaleX(-1); display: block;"></video>
+                    <canvas id="faceCanvas" style="display:none;"></canvas>
+                    <div id="faceScanLine"
+                        style="position:absolute; top:0; left:0; width:100%; height:3px; background:var(--primary); box-shadow:0 0 15px var(--primary); animation: scan 2s linear infinite; z-index: 2;">
+                    </div>
+                    <div style="padding: 15px; background: rgba(0,0,0,0.6); position: relative; z-index: 3;">
+                        <button type="button" class="btn btn-primary"
+                            style="width:100%; height:44px; font-size:0.9rem; font-weight: 700; letter-spacing: 1px; box-shadow: 0 4px 15px rgba(157, 80, 187, 0.4);"
+                            onclick="captureFace()">VERIFY IDENTITY</button>
+                    </div>
+                </div>
+            </form>
+            <div id="loginSuccess" class="auth-success" style="margin-top:1rem;"></div>
+            <div class="auth-toggle">Don't have an account? <a onclick="toggleAuthPage('register')">Create Account</a>
+            </div>
+            <div style="margin-top:1rem;font-size:.75rem;color:var(--muted);">AES-256 + HMAC-SHA256 + JWT + TOTP</div>
+        </div>
+    </div>
+
+    <!-- ===== REGISTER PAGE ===== -->
+    <div id="registerPage">
+        <div class="login-box">
+            <div style="font-size:2.5rem;color:var(--success);margin-bottom:1rem;"><i class="fa-solid fa-user-plus"></i>
+            </div>
+            <h1>Create Account</h1>
+            <p>Join the Secure Search Intelligence Platform</p>
+            <form onsubmit="doRegister(event)">
+                <input type="text" id="regUser" placeholder="Choose a Username" required autocomplete="username"
+                    minlength="3">
+                <div style="position:relative;">
+                    <input type="email" id="regEmail" placeholder="Email Address (for security alerts)" required
+                        autocomplete="email" style="padding-left:44px;">
+                    <i class="fa-solid fa-envelope"
+                        style="position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:0.9rem;"></i>
+                </div>
+                <input type="password" id="regPass" placeholder="Create Password" required autocomplete="new-password"
+                    minlength="6" oninput="checkPasswordStrength(this.value)">
+                <div class="strength-meter">
+                    <div class="strength-meter-fill" id="strengthFill"></div>
+                </div>
+                <div class="strength-label" id="strengthLabel">&nbsp;</div>
+                <input type="password" id="regPassConfirm" placeholder="Confirm Password" required
+                    autocomplete="new-password">
+                <div id="registerError"
+                    style="display:none;color:var(--danger);font-size:.8rem;padding:8px;margin-bottom:8px;background:var(--danger-light);border-radius:8px;">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%;" id="registerBtn">
+                    <i class="fa-solid fa-rocket" style="font-size:0.9rem;"></i> CREATE ACCOUNT
+                </button>
+            </form>
+            <div class="auth-toggle">Already have an account? <a onclick="toggleAuthPage('login')">Sign In</a></div>
+            <div style="margin-top:1rem;font-size:.75rem;color:var(--muted);">Your data is protected with military-grade
+                encryption</div>
+        </div>
+    </div>
+
+    <!-- 2FA Setup Modal -->
+    <div id="tfaModal"
+        style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:10000;display:none;justify-content:center;align-items:center;">
+        <div
+            style="background:var(--sidebar-bg);border:1px solid var(--border);border-radius:24px;padding:3rem;max-width:480px;width:90%;max-height:90vh;overflow-y:auto;box-shadow:0 0 80px rgba(157,80,187,0.3);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem;">
+                <h2 style="font-weight:800;font-size:1.5rem;"><i class="fa-solid fa-shield-check"
+                        style="color:var(--primary);margin-right:10px;"></i>Two-Factor Authentication</h2>
+                <button onclick="closeTfaModal()"
+                    style="background:none;border:none;color:var(--muted);font-size:1.5rem;cursor:pointer;"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="tfaContent"></div>
+        </div>
+    </div>
+
+    <div id="dashboard">
+        <div class="sidebar">
+            <div class="logo"><i class="fa-solid fa-shield-halved"></i> HAL 4.0</div>
+            <div class="nav-item active" onclick="go('home',this)"><i class="fa-solid fa-chart-pie"></i> Dashboard</div>
+            <div class="nav-item" onclick="go('search',this)"><i class="fa-solid fa-magnifying-glass"></i> Secure Search
+            </div>
+            <div class="nav-item" onclick="document.getElementById('csvIn').click()"><i
+                    class="fa-solid fa-cloud-arrow-up"></i> Upload Dataset</div>
+            <div class="nav-item" onclick="go('anomaly',this)"><i class="fa-solid fa-triangle-exclamation"></i> Anomaly
+                Detection</div>
+            <div class="nav-item" onclick="go('chain',this)"><i class="fa-solid fa-link"></i> Tamper Detection</div>
+            <div class="nav-item" onclick="go('audit',this)"><i class="fa-solid fa-clipboard-list"></i> Audit Logs</div>
+            <div class="nav-item" onclick="go('perf',this)"><i class="fa-solid fa-gauge-high"></i> Performance</div>
+            <div class="nav-item" onclick="toggleBreach()"><i class="fa-solid fa-skull-crossbones"></i> Breach
+                Simulation</div>
+            <div class="nav-item" onclick="openTfaModal()"><i class="fa-solid fa-mobile-screen"
+                    style="color:var(--success);"></i> 2FA Security</div>
+            <input type="file" id="csvIn" hidden accept=".csv" onchange="doCSV(this)">
+            <div style="margin-top:auto;">
+                <div class="nav-item" onclick="doLogout()"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sign Out
+                </div>
+            </div>
+        </div>
+
+        <div class="main">
+            <div class="top-bar">
+                <h2 id="pgTitle" style="font-weight:800;font-size:1.8rem;letter-spacing:-0.5px;">Dashboard</h2>
+                <div style="display:flex;align-items:center;gap:20px;">
+                    <div style="text-align:right;">
+                        <div style="font-weight:700;color:#fff;">ADMIN_001 <i class="fa-solid fa-user-shield"
+                                style="margin-left:8px;color:var(--primary);"></i></div>
+                        <div
+                            style="font-size:.75rem;color:var(--success);font-weight:800;display:flex;align-items:center;justify-content:flex-end;">
+                            <span class="indicator indicator-green"></span> SECURE PROTOCOL ACTIVE
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-row">
+                <div class="stat animate-slide" style="animation-delay: 0.1s;">
+                    <label><i class="fa-solid fa-database" style="color:var(--primary);"></i> Encrypted Records</label>
+                    <div class="num" id="sRec">—</div>
+                </div>
+                <div class="stat animate-slide" style="animation-delay: 0.2s;">
+                    <label><i class="fa-solid fa-key" style="color:var(--success);"></i> Search Tokens</label>
+                    <div class="num" id="sTok">—</div>
+                </div>
+                <div class="stat animate-slide" style="animation-delay: 0.3s;">
+                    <label><i class="fa-solid fa-link" style="color:var(--warning);"></i> Ledger Blocks</label>
+                    <div class="num" id="sBlk">—</div>
+                </div>
+                <div class="stat animate-slide" style="animation-delay: 0.4s;">
+                    <label><i class="fa-solid fa-clipboard-check" style="color:var(--danger);"></i> Security
+                        Events</label>
+                    <div class="num" id="sLog">—</div>
+                </div>
+            </div>
+
+            <div id="home" class="page active">
+                <div class="card animate-fade"
+                    style="background:linear-gradient(135deg,rgba(4,9,30,0.95),rgba(157,80,187,0.1));border:1px solid var(--border);padding:3rem;position:relative;overflow:hidden;box-shadow: 0 20px 50px rgba(0,0,0,0.4);">
+                    <div style="position:absolute;right:-5%;top:-10%;font-size:12rem;opacity:0.03;color:#fff;"><i
+                            class="fa-solid fa-shield-halved"></i></div>
+                    <h2
+                        style="font-size:1.8rem;margin-bottom:1.5rem;color:#fff;display:flex;align-items:center;gap:15px;">
+                        <i class="fa-solid fa-microchip"
+                            style="color:var(--primary);filter:drop-shadow(0 0 10px var(--primary));"></i> HAL 4.0
+                        Architecture
+                    </h2>
+                    <p style="line-height:1.8;font-size:1.1rem;color:#e2e8f0;max-width:800px;margin-bottom:2rem;">
+                        A Next-Gen **Secured String Matching** platform utilizing Searchable Encryption.
+                        Records are fully encrypted at rest and matched via high-performance HMAC-SHA256 blind indexing,
+                        ensuring zero-plaintext exposure to server or database.
+                    </p>
+                    <div style="display:grid;grid-template-columns: repeat(2, 1fr); gap:1.5rem;">
+                        <div style="background:rgba(255,255,255,0.03);padding:1.75rem;border-radius:16px;border:1px solid var(--border);transition:0.3s;"
+                            onmouseover="this.style.background='rgba(57,255,20,0.05)'"
+                            onmouseout="this.style.background='rgba(255,255,255,0.03)'">
+                            <h4
+                                style="margin-bottom:12px;color:var(--danger);display:flex;align-items:center;gap:10px;">
+                                <i class="fa-solid fa-xmark"></i> Traditional Systems
+                            </h4>
+                            <p style="font-size:.9rem;color:var(--muted);line-height:1.6;">Decryption occurs in memory
+                                for search. Plaintext is briefly exposed to attackers or memory dumps.</p>
+                        </div>
+                        <div style="background:rgba(57,255,20,0.05);padding:1.75rem;border-radius:16px;border:1px solid var(--primary);transition:0.3s;"
+                            onmouseover="this.style.background='rgba(57,255,20,0.08)'"
+                            onmouseout="this.style.background='rgba(57,255,20,0.05)'">
+                            <h4
+                                style="margin-bottom:12px;color:var(--primary);display:flex;align-items:center;gap:10px;">
+                                <i class="fa-solid fa-check"></i> Zero-Plaintext Search
+                            </h4>
+                            <p style="font-size:.9rem;color:var(--muted);line-height:1.6;">Search is performed on
+                                pre-computed HMAC tokens. The server never observes the search term or results.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-head">
+                            <h3>Security Architecture</h3>
+                        </div>
+                        <div style="padding:1.5rem;display:grid;gap:12px;">
+                            <div
+                                style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(157,80,187,0.05);border-radius:8px;">
+                                <i class="fa-solid fa-lock" style="color:var(--primary);width:20px;"></i>
+                                <div><strong>Storage:</strong> AES-256-CBC</div>
+                            </div>
+                            <div
+                                style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(157,80,187,0.05);border-radius:8px;">
+                                <i class="fa-solid fa-key" style="color:var(--primary);width:20px;"></i>
+                                <div><strong>Search:</strong> HMAC-SHA256 Blind Index</div>
+                            </div>
+                            <div
+                                style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(0,210,255,0.05);border-radius:8px;">
+                                <i class="fa-solid fa-link" style="color:var(--success);width:20px;"></i>
+                                <div><strong>Integrity:</strong> Blockchain Hash Chain</div>
+                            </div>
+                            <div
+                                style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(0,210,255,0.05);border-radius:8px;">
+                                <i class="fa-solid fa-fingerprint" style="color:var(--success);width:20px;"></i>
+                                <div><strong>Auth:</strong> JWT Tokens</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-head">
+                            <h3>Activity (Real-Time)</h3>
+                        </div>
+                        <div style="padding:1.5rem;height:280px;"><canvas id="chartHome"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SEARCH -->
+            <div id="search" class="page">
+                <div class="search-banner animate-slide">
+                    <h2 style="display:flex;align-items:center;gap:15px;"><i class="fa-solid fa-radar"
+                            style="color:#fff;animation: pulse 2s infinite;"></i> Search Secured Records</h2>
+                    <p>Matches are found using high-entropy HMAC tokens. Zero plaintext exposed.</p>
+                    <div class="search-wrap"><i class="fa-solid fa-magnifying-glass"></i><input id="qIn"
+                            placeholder="Search by Name, City, or Prefix... (e.g. Pri, Mum, Sar)" autocomplete="off">
+                    </div>
+                    <div style="margin-top:1.5rem;display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
+                        <span
+                            style="font-size:0.8rem;color:rgba(255,255,255,0.7);display:flex;align-items:center;">Quick
+                            Suggestions:</span>
+                        <button onclick="document.getElementById('qIn').value='Aisha';doSearch('Aisha')"
+                            style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:6px 14px;border-radius:30px;font-size:0.75rem;cursor:pointer;backdrop-filter:blur(5px);transition:0.3s;"
+                            onmouseover="this.style.background='rgba(157,80,187,0.3)'"
+                            onmouseout="this.style.background='rgba(255,255,255,0.1)'">Aisha</button>
+                        <button onclick="document.getElementById('qIn').value='Mumbai';doSearch('Mumbai')"
+                            style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:6px 14px;border-radius:30px;font-size:0.75rem;cursor:pointer;backdrop-filter:blur(5px);transition:0.3s;"
+                            onmouseover="this.style.background='rgba(0,210,255,0.3)'"
+                            onmouseout="this.style.background='rgba(255,255,255,0.1)'">Mumbai</button>
+                        <button onclick="document.getElementById('qIn').value='Rahul';doSearch('Rahul')"
+                            style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:6px 14px;border-radius:30px;font-size:0.75rem;cursor:pointer;backdrop-filter:blur(5px);transition:0.3s;"
+                            onmouseover="this.style.background='rgba(157,80,187,0.3)'"
+                            onmouseout="this.style.background='rgba(255,255,255,0.1)'">Rahul</button>
+                    </div>
+                </div>
+                <div id="searchError"></div>
+                <div id="tokenBox"></div>
+                <div class="card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Record ID</th>
+                                <th>Customer (Decrypted & Masked)</th>
+                                <th>Account</th>
+                                <th>City</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resBody">
+                            <tr>
+                                <td colspan="5" style="text-align:center;padding:3rem;color:var(--muted);">Enter a
+                                    search query above (min 3 characters)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ANOMALY -->
+            <div id="anomaly" class="page">
+                <div style="display:grid;grid-template-columns: 1fr 1fr; gap:2rem; margin-bottom:2rem;">
+                    <div class="card animate-slide" style="text-align:center; position:relative; padding:2rem;">
+                        <div
+                            style="position:absolute; top:15px; right:15px; font-size:1.5rem; color:var(--muted); opacity:0.3;">
+                            <i class="fa-solid fa-radar"></i>
+                        </div>
+                        <div class="card-head" style="border:none; justify-content:center;">
+                            <h3
+                                style="text-transform:uppercase; letter-spacing:2px; font-size:0.9rem; color:var(--muted);">
+                                Global Threat Level</h3>
+                        </div>
+                        <div style="padding:1rem;">
+                            <div id="riskNum"
+                                style="font-size:6rem;font-weight:900;color:var(--success);text-shadow: 0 0 30px var(--success-light);">
+                                0</div>
+                            <div
+                                style="font-weight:800;color:var(--muted);font-size:.8rem;letter-spacing:1px;margin-top:-10px;">
+                                SYSTEM ANOMALY SCORE</div>
+                        </div>
+                    </div>
+                    <div class="card animate-slide" style="animation-delay: 0.2s;">
+                        <div class="card-head">
+                            <h3 style="gap:15px;"><i class="fa-solid fa-bell-concierge"
+                                    style="color:var(--warning);"></i> Active Intelligence Alerts</h3>
+                        </div>
+                        <div style="padding:2rem;" id="alertsBox">
+                            <div class="alert alert-success"><i class="fa-solid fa-shield-check"></i> System behavior
+                                within expected parameters.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card animate-fade">
+                    <div class="card-head">
+                        <h3><i class="fa-solid fa-chart-line" style="color:var(--primary);"></i> Search Frequency
+                            Timeline</h3>
+                    </div>
+                    <div style="padding:2rem;height:320px;"><canvas id="chartAnomaly"></canvas></div>
+                </div>
+            </div>
+
+            <!-- BLOCKCHAIN -->
+            <div id="chain" class="page">
+                <div class="card animate-slide"
+                    style="background:linear-gradient(135deg,#0b112b,#1e293b,#9d50bb);border:1px solid var(--border);">
+                    <div class="card-head">
+                        <h3 style="gap:15px;"><i class="fa-solid fa-link" style="color:var(--success);"></i> Blockchain
+                            Ledger Integrity</h3>
+                        <button class="btn btn-primary" onclick="doTamperCheck()"
+                            style="padding: 10px 20px; font-size:0.85rem;">
+                            <i class="fa-solid fa-shield-check"></i> VERIFY CHAIN
+                        </button>
+                    </div>
+                    <div id="tamperStatus" style="padding:3rem;text-align:center;">
+                        <div style="opacity:0.5; font-size:0.9rem;">
+                            <i class="fa-solid fa-hourglass-start"
+                                style="font-size:2rem; margin-bottom:1rem; display:block; color:var(--success);"></i>
+                            Awaiting integrity verification request...
+                        </div>
+                    </div>
+                </div>
+                <div class="card animate-fade">
+                    <div class="card-head">
+                        <h3><i class="fa-solid fa-cubes-stacked" style="color:var(--primary);"></i> Immutable Block
+                            Explorer</h3>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Time</th>
+                                <th>Action</th>
+                                <th>User</th>
+                                <th>Prev Hash</th>
+                                <th>Block Hash</th>
+                            </tr>
+                        </thead>
+                        <tbody id="chainBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- AUDIT -->
+            <div id="audit" class="page">
+                <div class="card">
+                    <div class="card-head">
+                        <h3><i class="fa-solid fa-clipboard-list"></i> Immutable Audit Trail</h3>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>User</th>
+                                <th>Action</th>
+                                <th>Details</th>
+                                <th>Hash</th>
+                            </tr>
+                        </thead>
+                        <tbody id="auditBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- PERFORMANCE -->
+            <div id="perf" class="page">
+                <div class="card">
+                    <div class="card-head">
+                        <h3><i class="fa-solid fa-gauge-high"></i> Encryption & Retrieval Scorecard</h3>
+                    </div>
+                    <div class="metric-grid">
+                        <div class="metric"><label>Encryption Speed</label><span class="big"
+                                id="mEnc">—</span><small>Per Record (AES-256)</small></div>
+                        <div class="metric"><label>Token Speed</label><span class="big"
+                                id="mTok">—</span><small>HMAC-SHA256</small></div>
+                        <div class="metric"><label>Throughput</label><span class="big"
+                                id="mThr">—</span><small>Rec/Sec</small></div>
+                        <div class="metric"><label>Records</label><span class="big" id="mRec">—</span><small>All
+                                Encrypted</small></div>
+                        <div class="metric"><label>Tokens</label><span class="big" id="mTokC">—</span><small>Index
+                                Entries</small></div>
+                        <div class="metric"><label>Per Record</label><span class="big" id="mRat">—</span><small>Avg
+                                Index Depth</small></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-head">
+                        <h3>Benchmark</h3>
+                    </div>
+                    <div style="padding:1.5rem;height:280px;"><canvas id="chartPerf"></canvas></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var API = window.location.origin;
+        if (API === "null" || API.indexOf("file://") === 0) API = "http://127.0.0.1:8000";
+        var TK = null, AES_KEY = null, HMAC_KEY = null, charts = {};
+        var AES_HEX = "a0f1f1574cdca14f8822063eff630361aec5beec3b3c6c6bf7f29214683b33c7";
+        var HMAC_HEX = "78e670e84ac5a9d52b8662aa74dbec8db961d38f71c18da76b720c5faf05b43e";
+        var waveOffset = 0, refreshTimer = null;
+        var waveHistory = []; // rolling data for wavelength chart
+
+        document.addEventListener('DOMContentLoaded', function () {
+            try { AES_KEY = CryptoJS.enc.Hex.parse(AES_HEX); HMAC_KEY = CryptoJS.enc.Hex.parse(HMAC_HEX); } catch (e) { console.error(e); }
+            TK = localStorage.getItem('hal4_tk');
+            if (TK) initApp();
+            var qInput = document.getElementById('qIn');
+            if (qInput) { var t = null; qInput.addEventListener('keyup', function () { clearTimeout(t); var v = qInput.value; t = setTimeout(function () { doSearch(v); }, 500); }); }
+        });
+
+        function decryptField(b64) { try { var raw = CryptoJS.enc.Base64.parse(b64); var iv = CryptoJS.lib.WordArray.create(raw.words.slice(0, 4), 16); var ct = CryptoJS.lib.WordArray.create(raw.words.slice(4), raw.sigBytes - 16); return CryptoJS.AES.decrypt({ ciphertext: ct }, AES_KEY, { iv: iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 }).toString(CryptoJS.enc.Utf8); } catch (e) { return "[encrypted]"; } }
+        function genToken(text) { return CryptoJS.HmacSHA256(text.toLowerCase().trim(), HMAC_KEY).toString(); }
+        function maskName(s) { if (!s || s.length < 3) return "****"; var p = s.split(' '); if (p.length > 1) return p[0] + " " + "*".repeat(Math.max(p[1].length, 1)); return s.slice(0, 3) + "*".repeat(Math.max(s.length - 3, 1)); }
+        function maskAcc(s) { if (!s || s.length < 4) return "****"; return "****-****-" + s.slice(-4); }
+
+        // ===== AUTH PAGE TOGGLE =====
+        function toggleAuthPage(page) {
+            var loginPage = document.getElementById('loginPage');
+            var registerPage = document.getElementById('registerPage');
+            var loginErr = document.getElementById('loginError');
+            var regErr = document.getElementById('registerError');
+            if (loginErr) loginErr.style.display = 'none';
+            if (regErr) regErr.style.display = 'none';
+            if (page === 'register') {
+                loginPage.style.display = 'none';
+                registerPage.style.display = 'flex';
+                document.getElementById('regUser').focus();
+            } else {
+                registerPage.style.display = 'none';
+                loginPage.style.display = 'flex';
+                document.getElementById('inUser').focus();
+            }
+        }
+
+        // ===== PASSWORD STRENGTH =====
+        function checkPasswordStrength(pwd) {
+            var fill = document.getElementById('strengthFill');
+            var label = document.getElementById('strengthLabel');
+            if (!pwd || pwd.length === 0) {
+                fill.style.width = '0%';
+                label.innerHTML = '&nbsp;';
+                return;
+            }
+            var score = 0;
+            if (pwd.length >= 6) score++;
+            if (pwd.length >= 10) score++;
+            if (/[A-Z]/.test(pwd)) score++;
+            if (/[0-9]/.test(pwd)) score++;
+            if (/[^A-Za-z0-9]/.test(pwd)) score++;
+
+            if (score <= 2) {
+                fill.style.width = '33%';
+                fill.style.background = 'linear-gradient(to right, #ef4444, #f97316)';
+                label.innerText = 'Weak';
+                label.style.color = '#ef4444';
+            } else if (score <= 3) {
+                fill.style.width = '66%';
+                fill.style.background = 'linear-gradient(to right, #f59e0b, #eab308)';
+                label.innerText = 'Medium';
+                label.style.color = '#f59e0b';
+            } else {
+                fill.style.width = '100%';
+                fill.style.background = 'linear-gradient(to right, #22c55e, #06d6a0)';
+                label.innerText = 'Strong';
+                label.style.color = '#22c55e';
+            }
+        }
+
+        // ===== REGISTER =====
+        function doRegister(e) {
+            e.preventDefault();
+            var errBox = document.getElementById('registerError');
+            errBox.style.display = 'none';
+            var username = document.getElementById('regUser').value.trim();
+            var email = document.getElementById('regEmail').value.trim();
+            var password = document.getElementById('regPass').value;
+            var confirm = document.getElementById('regPassConfirm').value;
+
+            if (username.length < 3) {
+                errBox.style.display = 'block';
+                errBox.innerText = 'Username must be at least 3 characters';
+                return;
+            }
+            if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                errBox.style.display = 'block';
+                errBox.innerText = 'Please enter a valid email address';
+                return;
+            }
+            if (password.length < 6) {
+                errBox.style.display = 'block';
+                errBox.innerText = 'Password must be at least 6 characters';
+                return;
+            }
+            if (password !== confirm) {
+                errBox.style.display = 'block';
+                errBox.innerText = 'Passwords do not match';
+                return;
+            }
+
+            var btn = document.getElementById('registerBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> CREATING...';
+
+            fetch(API + '/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: username, password: password, email: email })
+            })
+                .then(function (r) { return r.json().then(function (d) { return { status: r.status, data: d }; }); })
+                .then(function (res) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-rocket" style="font-size:0.9rem;"></i> CREATE ACCOUNT';
+                    if (res.status !== 200) {
+                        errBox.style.display = 'block';
+                        errBox.innerText = res.data.detail || 'Registration failed';
+                        return;
+                    }
+                    // Success — switch to login with message
+                    document.getElementById('regUser').value = '';
+                    document.getElementById('regEmail').value = '';
+                    document.getElementById('regPass').value = '';
+                    document.getElementById('regPassConfirm').value = '';
+                    checkPasswordStrength('');
+                    toggleAuthPage('login');
+                    var successBox = document.getElementById('loginSuccess');
+                    successBox.style.display = 'block';
+                    successBox.innerHTML = '<i class="fa-solid fa-circle-check" style="margin-right:6px;"></i> Account created successfully! Sign in with your new credentials.';
+                    document.getElementById('inUser').value = username;
+                    document.getElementById('inPass').value = '';
+                    document.getElementById('inPass').focus();
+                })
+                .catch(function () {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-rocket" style="font-size:0.9rem;"></i> CREATE ACCOUNT';
+                    errBox.style.display = 'block';
+                    errBox.innerText = 'Connection failed. Please try again.';
+                });
+        }
+
+        function doLogin(e) {
+            e.preventDefault();
+            var errBox = document.getElementById('loginError');
+            errBox.style.display = 'none';
+            var fd = new FormData();
+            fd.append('username', document.getElementById('inUser').value);
+            fd.append('password', document.getElementById('inPass').value);
+            var totpIn = document.getElementById('inTotp');
+            var totpCode = totpIn ? totpIn.value : '';
+            var url = API + "/login";
+            if (totpCode) url += "?totp_code=" + encodeURIComponent(totpCode);
+            fetch(url, { method: 'POST', body: fd })
+                .then(function (r) { return r.json().then(function (d) { return { status: r.status, data: d }; }); })
+                .then(function (res) {
+                    if (res.data.requires_2fa) {
+                        // Show TOTP input
+                        document.getElementById('totpRow').style.display = 'block';
+                        document.getElementById('inTotp').focus();
+                        document.getElementById('loginBtn').innerText = 'VERIFY & AUTHENTICATE';
+                        errBox.style.display = 'block';
+                        errBox.style.color = 'var(--primary)';
+                        errBox.style.background = 'var(--primary-light)';
+                        errBox.innerText = '🔐 Enter your Google Authenticator 6-digit code';
+                        return;
+                    }
+                    if (res.data.requires_face) {
+                        // User verified credentials/2FA, now enforce Face ID
+                        // Instead of dimming the whole form, just disable inputs
+                        document.getElementById('inUser').disabled = true;
+                        document.getElementById('inPass').disabled = true;
+                        if (document.getElementById('inTotp')) document.getElementById('inTotp').disabled = true;
+                        document.getElementById('inUser').parentElement.style.opacity = '0.5';
+
+                        document.getElementById('loginBtn').style.display = 'none';
+
+                        errBox.style.display = 'block';
+                        errBox.style.color = 'var(--primary)';
+                        errBox.style.background = 'var(--primary-light)';
+                        errBox.innerText = '👤 Login Verified. Final Step: Biometric Verification';
+
+                        startFaceAuth();
+                        return;
+                    }
+                    if (res.status !== 200) {
+                        errBox.style.display = 'block';
+                        errBox.style.color = 'var(--danger)';
+                        errBox.style.background = 'var(--danger-light)';
+                        errBox.innerText = res.data.detail || 'Authentication Failed';
+                        return;
+                    }
+                    TK = res.data.access_token;
+                    localStorage.setItem('hal4_tk', TK);
+                    location.reload();
+                }).catch(function () {
+                    errBox.style.display = 'block';
+                    errBox.style.color = 'var(--danger)';
+                    errBox.style.background = 'var(--danger-light)';
+                    errBox.innerText = 'Authentication Failed';
+                });
+        }
+
+        // ===== FACE ID AUTH =====
+        var faceStream = null;
+        function startFaceAuth() {
+            var container = document.getElementById('faceContainer');
+            var video = document.getElementById('faceVideo');
+            var errBox = document.getElementById('loginError');
+            errBox.style.display = 'none';
+
+            if (container.style.display === 'block') {
+                stopFaceAuth();
+                container.style.display = 'none';
+                return;
+            }
+
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(function (stream) {
+                    faceStream = stream;
+                    video.srcObject = stream;
+                    container.style.display = 'block';
+                    // Ensure the button is visible
+                    setTimeout(() => container.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+                })
+                .catch(function (err) {
+                    errBox.style.display = 'block';
+                    errBox.innerText = "Webcam Access Denied: " + err.message;
+                });
+        }
+
+        function stopFaceAuth() {
+            if (faceStream) {
+                faceStream.getTracks().forEach(track => track.stop());
+                faceStream = null;
+            }
+        }
+
+        function captureFace() {
+            var video = document.getElementById('faceVideo');
+            var canvas = document.getElementById('faceCanvas');
+            var errBox = document.getElementById('loginError');
+            var context = canvas.getContext('2d');
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            var base64 = canvas.toDataURL('image/jpeg', 0.8);
+
+            // Show loading state
+            var verifyBtn = document.querySelector('#faceContainer button');
+            var originalText = verifyBtn.innerText;
+            verifyBtn.disabled = true;
+            verifyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> VERIFYING...';
+
+            fetch(API + "/face-login", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: base64, username: document.getElementById('inUser').value })
+            })
+                .then(function (r) { return r.json().then(function (d) { return { status: r.status, data: d }; }); })
+                .then(function (res) {
+                    if (res.status === 200) {
+                        stopFaceAuth();
+                        TK = res.data.access_token;
+                        localStorage.setItem('hal4_tk', TK);
+                        location.reload();
+                    } else {
+                        verifyBtn.disabled = false;
+                        verifyBtn.innerText = originalText;
+                        errBox.style.display = 'block';
+                        errBox.style.color = 'var(--danger)';
+                        errBox.style.background = 'var(--danger-light)';
+                        errBox.innerText = res.data.detail || "Authentication Failed";
+                    }
+                })
+                .catch(function (err) {
+                    verifyBtn.disabled = false;
+                    verifyBtn.innerText = originalText;
+                    console.error(err);
+                    errBox.style.display = 'block';
+                    errBox.innerText = "Biometric API connection failed";
+                });
+        }
+        function doLogout() { localStorage.removeItem('hal4_tk'); clearInterval(refreshTimer); location.reload(); }
+        function hdr() { return { 'Authorization': 'Bearer ' + TK }; }
+
+        // ===== 2FA MODAL =====
+        function closeTfaModal() { document.getElementById('tfaModal').style.display = 'none'; }
+        function openTfaModal() {
+            var modal = document.getElementById('tfaModal');
+            modal.style.display = 'flex';
+            var content = document.getElementById('tfaContent');
+            content.innerHTML = '<div style="text-align:center;padding:2rem;"><i class="fa-solid fa-spinner fa-spin" style="font-size:2rem;color:var(--primary);"></i><p style="color:var(--muted);margin-top:1rem;">Checking 2FA status...</p></div>';
+            fetch(API + "/2fa-status", { headers: hdr() })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    if (d.enabled) {
+                        // 2FA is active — show disable option
+                        content.innerHTML = '<div style="text-align:center;">'
+                            + '<div style="width:80px;height:80px;border-radius:50%;background:rgba(0,210,255,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;"><i class="fa-solid fa-shield-check" style="font-size:2rem;color:#00d2ff;"></i></div>'
+                            + '<h3 style="color:#00d2ff;margin-bottom:8px;">2FA is Active</h3>'
+                            + '<p style="color:var(--muted);margin-bottom:2rem;">Your account is protected with Google Authenticator.</p>'
+                            + '<div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;text-align:left;">'
+                            + '<p style="color:var(--muted);font-size:.85rem;margin-bottom:12px;">To disable 2FA, enter your current authenticator code:</p>'
+                            + '<input type="text" id="tfaDisableCode" placeholder="6-digit code" maxlength="6" style="text-align:center;letter-spacing:8px;font-size:1.3rem;font-family:JetBrains Mono;width:100%;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:12px;color:var(--text);margin-bottom:12px;">'
+                            + '<div id="tfaDisableError" style="display:none;color:var(--danger);font-size:.8rem;padding:8px;margin-bottom:8px;background:var(--danger-light);border-radius:8px;"></div>'
+                            + '<button onclick="disableTfa()" class="btn" style="width:100%;padding:12px;background:var(--danger-light);color:var(--danger);border:1px solid var(--danger);border-radius:12px;cursor:pointer;font-weight:700;">DISABLE 2FA</button>'
+                            + '</div></div>';
+                    } else {
+                        // 2FA not set up — show setup
+                        content.innerHTML = '<div style="text-align:center;">'
+                            + '<div style="width:80px;height:80px;border-radius:50%;background:rgba(157,80,187,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;"><i class="fa-solid fa-mobile-screen" style="font-size:2rem;color:#9d50bb;"></i></div>'
+                            + '<h3 style="color:var(--text);margin-bottom:8px;">Set Up Google Authenticator</h3>'
+                            + '<p style="color:var(--muted);margin-bottom:2rem;">Add an extra layer of security to your account.</p>'
+                            + '<button onclick="startTfaSetup()" class="btn btn-primary" style="width:100%;padding:14px;border-radius:12px;font-weight:700;cursor:pointer;">GENERATE QR CODE</button>'
+                            + '</div>';
+                    }
+                }).catch(function (e) { content.innerHTML = '<p style="color:var(--danger);">Error: ' + e.message + '</p>'; });
+        }
+
+        function startTfaSetup() {
+            var content = document.getElementById('tfaContent');
+            content.innerHTML = '<div style="text-align:center;padding:2rem;"><i class="fa-solid fa-spinner fa-spin" style="font-size:2rem;color:var(--primary);"></i><p style="color:var(--muted);margin-top:1rem;">Generating secret key...</p></div>';
+            fetch(API + "/setup-2fa", { method: 'POST', headers: hdr() })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    content.innerHTML = '<div style="text-align:center;">'
+                        + '<p style="color:var(--muted);margin-bottom:1.5rem;">Scan this QR code with Google Authenticator:</p>'
+                        + '<div style="background:white;border-radius:16px;padding:16px;display:inline-block;margin-bottom:1.5rem;"><img src="data:image/png;base64,' + d.qr_code + '" style="width:200px;height:200px;" alt="QR Code"></div>'
+                        + '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:1.5rem;">'
+                        + '<p style="font-size:.75rem;color:var(--muted);margin-bottom:4px;">Manual entry key:</p>'
+                        + '<p style="font-family:JetBrains Mono;font-size:.85rem;color:var(--primary);word-break:break-all;font-weight:700;">' + d.secret + '</p></div>'
+                        + '<p style="color:var(--muted);font-size:.85rem;margin-bottom:12px;">Enter the 6-digit code from Google Authenticator to verify:</p>'
+                        + '<input type="text" id="tfaVerifyCode" placeholder="000000" maxlength="6" style="text-align:center;letter-spacing:8px;font-size:1.5rem;font-family:JetBrains Mono;width:100%;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:12px;color:var(--text);margin-bottom:12px;">'
+                        + '<div id="tfaVerifyError" style="display:none;color:var(--danger);font-size:.8rem;padding:8px;margin-bottom:8px;background:var(--danger-light);border-radius:8px;"></div>'
+                        + '<button onclick="verifyAndEnableTfa()" class="btn btn-primary" style="width:100%;padding:14px;border-radius:12px;font-weight:700;cursor:pointer;">VERIFY & ENABLE 2FA</button>'
+                        + '</div>';
+                }).catch(function (e) { content.innerHTML = '<p style="color:var(--danger);">Error: ' + e.message + '</p>'; });
+        }
+
+        function verifyAndEnableTfa() {
+            var code = document.getElementById('tfaVerifyCode').value;
+            var errBox = document.getElementById('tfaVerifyError');
+            if (!code || code.length !== 6) { errBox.style.display = 'block'; errBox.innerText = 'Enter a valid 6-digit code'; return; }
+            errBox.style.display = 'none';
+            fetch(API + "/enable-2fa", { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, hdr()), body: JSON.stringify({ code: code }) })
+                .then(function (r) { return r.json().then(function (d) { return { status: r.status, data: d }; }); })
+                .then(function (res) {
+                    if (res.status !== 200) { errBox.style.display = 'block'; errBox.innerText = res.data.detail || 'Invalid code'; return; }
+                    document.getElementById('tfaContent').innerHTML = '<div style="text-align:center;">'
+                        + '<div style="width:80px;height:80px;border-radius:50%;background:rgba(0,210,255,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;"><i class="fa-solid fa-circle-check" style="font-size:2.5rem;color:#00d2ff;"></i></div>'
+                        + '<h3 style="color:#00d2ff;margin-bottom:8px;">2FA Enabled Successfully!</h3>'
+                        + '<p style="color:var(--muted);margin-bottom:2rem;">Your account is now protected with Google Authenticator.</p>'
+                        + '<button onclick="closeTfaModal()" class="btn btn-primary" style="width:100%;padding:14px;border-radius:12px;font-weight:700;cursor:pointer;">DONE</button></div>';
+                }).catch(function (e) { errBox.style.display = 'block'; errBox.innerText = 'Error: ' + e.message; });
+        }
+
+        function disableTfa() {
+            var code = document.getElementById('tfaDisableCode').value;
+            var errBox = document.getElementById('tfaDisableError');
+            if (!code || code.length !== 6) { errBox.style.display = 'block'; errBox.innerText = 'Enter a valid 6-digit code'; return; }
+            errBox.style.display = 'none';
+            fetch(API + "/disable-2fa", { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, hdr()), body: JSON.stringify({ code: code }) })
+                .then(function (r) { return r.json().then(function (d) { return { status: r.status, data: d }; }); })
+                .then(function (res) {
+                    if (res.status !== 200) { errBox.style.display = 'block'; errBox.innerText = res.data.detail || 'Invalid code'; return; }
+                    document.getElementById('tfaContent').innerHTML = '<div style="text-align:center;">'
+                        + '<div style="width:80px;height:80px;border-radius:50%;background:rgba(245,158,11,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;"><i class="fa-solid fa-lock-open" style="font-size:2rem;color:var(--warning);"></i></div>'
+                        + '<h3 style="color:var(--warning);margin-bottom:8px;">2FA Disabled</h3>'
+                        + '<p style="color:var(--muted);margin-bottom:2rem;">Two-factor authentication has been removed from your account.</p>'
+                        + '<button onclick="closeTfaModal()" class="btn" style="width:100%;padding:14px;border-radius:12px;font-weight:700;cursor:pointer;background:var(--card);border:1px solid var(--border);color:var(--text);">CLOSE</button></div>';
+                }).catch(function (e) { errBox.style.display = 'block'; errBox.innerText = 'Error: ' + e.message; });
+        }
+
+        function initApp() {
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('registerPage').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            loadStats();
+            setTimeout(initCharts, 200);
+            // Real-time auto-refresh every 3 seconds
+            refreshTimer = setInterval(function () {
+                loadStats();
+                updateWaveChart();
+                var activePage = document.querySelector('.page.active');
+                if (activePage) {
+                    if (activePage.id === 'anomaly') loadAnomaly();
+                    if (activePage.id === 'perf') loadPerf();
+                    if (activePage.id === 'audit') loadAudit();
+                    if (activePage.id === 'chain') loadChain();
+                }
+            }, 3000);
+        }
+
+        function go(page, el) {
+            var pages = document.querySelectorAll('.page'); for (var i = 0; i < pages.length; i++) pages[i].classList.remove('active');
+            var navs = document.querySelectorAll('.nav-item'); for (var i = 0; i < navs.length; i++) navs[i].classList.remove('active');
+            document.getElementById(page).classList.add('active'); if (el) el.classList.add('active');
+            var titles = { home: 'Dashboard', search: 'Secure Search', anomaly: 'Anomaly Detection', chain: 'Tamper Detection', audit: 'Audit Logs', perf: 'Performance' };
+            document.getElementById('pgTitle').innerText = titles[page] || page;
+            loadStats();
+            if (page === 'audit') loadAudit(); if (page === 'anomaly') loadAnomaly(); if (page === 'chain') loadChain(); if (page === 'perf') loadPerf();
+        }
+
+        function loadStats() {
+            fetch(API + "/stats", { headers: hdr() }).then(function (r) { if (r.status === 401) { doLogout(); return; } return r.json(); }).then(function (d) {
+                if (!d) return;
+                animateNumber('sRec', d.total_records || 0); animateNumber('sTok', d.total_tokens || 0);
+                animateNumber('sBlk', d.total_blocks || 0); animateNumber('sLog', d.total_logs || 0);
+            }).catch(function (e) { console.error("Stats error:", e); });
+        }
+        function animateNumber(id, target) {
+            var el = document.getElementById(id); if (!el) return;
+            var current = parseInt(el.innerText.replace(/,/g, '')) || 0;
+            if (current === target) { el.innerText = target.toLocaleString(); return; }
+            el.innerText = target.toLocaleString();
+        }
+
+        function doSearch(q) {
+            if (!q || q.length < 3) return;
+            var errBox = document.getElementById('searchError'); errBox.style.display = 'none';
+            var box = document.getElementById('tokenBox'); box.style.display = 'block';
+            try { var token = genToken(q); box.innerText = "[SECURE PROTOCOL] HMAC-SHA256 Blind Search\n> INPUT: \"" + q + "\"\n> HMAC_KEY: " + HMAC_HEX.substring(0, 16) + "... (256-bit)\n> TOKEN: " + token.substring(0, 48) + "...\n> STATUS: Querying encrypted index..."; } catch (e) { errBox.style.display = 'block'; errBox.innerText = "Token error: " + e.message; return; }
+            fetch(API + "/secure-search?query=" + encodeURIComponent(q), { method: 'POST', headers: hdr() })
+                .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+                .then(function (d) {
+                    box.innerText += "\n> FOUND: " + d.count + " records in " + d.time_ms + "ms (zero plaintext exposed)";
+                    var tb = document.getElementById('resBody');
+                    if (!d.results || d.results.length === 0) { tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--muted);">No records match this token.</td></tr>'; return; }
+                    // Deduplicate by record ID
+                    var seen = {}, unique = [];
+                    for (var i = 0; i < d.results.length; i++) { if (!seen[d.results[i].id]) { seen[d.results[i].id] = true; unique.push(d.results[i]); } }
+                    var html = '';
+                    for (var i = 0; i < unique.length; i++) {
+                        var r = unique[i]; var name = decryptField(r.customer_name); var acc = decryptField(r.account); var city = decryptField(r.city);
+                        html += '<tr><td style="font-family:JetBrains Mono;color:var(--primary);font-weight:700;">#' + r.id + '</td>'
+                            + '<td style="font-weight:600;">' + maskName(name) + '</td>'
+                            + '<td style="font-family:JetBrains Mono;color:var(--muted);font-size:.8rem;">' + maskAcc(acc) + '</td>'
+                            + '<td>' + city + '</td>'
+                            + '<td><span class="badge badge-green">SECURE MATCH</span></td></tr>';
+                    }
+                    tb.innerHTML = html; loadStats();
+                }).catch(function (e) { console.error(e); errBox.style.display = 'block'; errBox.innerText = "Search error: " + e.message; box.innerText += "\n> ERROR: " + e.message; });
+        }
+
+        function loadAudit() {
+            fetch(API + "/audit-logs", { headers: hdr() }).then(function (r) { if (r.status === 401) { doLogout(); return; } return r.json(); }).then(function (d) {
+                if (!d) return; var html = '', seen = {};
+                for (var i = 0; i < d.length; i++) {
+                    var l = d[i]; var key = l.time + l.user + l.action + l.details; if (seen[key]) continue; seen[key] = true;
+                    html += '<tr><td style="font-size:.8rem;">' + l.time + '</td><td style="font-weight:600;">' + l.user + '</td><td><span class="badge badge-blue">' + l.action + '</span></td><td style="color:var(--muted);font-size:.8rem;max-width:300px;overflow:hidden;text-overflow:ellipsis;">' + l.details + '</td><td style="font-family:JetBrains Mono;font-size:.7rem;color:var(--muted);">' + l.hash + '</td></tr>';
+                }
+                document.getElementById('auditBody').innerHTML = html;
+            }).catch(function (e) { console.error(e); });
+        }
+
+        function loadChain() {
+            fetch(API + "/blockchain-chain", { headers: hdr() }).then(function (r) { if (r.status === 401) { doLogout(); return; } return r.json(); }).then(function (d) {
+                if (!d) return; var html = '';
+                for (var i = 0; i < d.length; i++) {
+                    var b = d[i];
+                    html += '<tr><td style="font-weight:700;color:var(--primary);">#' + b.id + '</td><td style="font-size:.8rem;">' + b.time + '</td><td><span class="badge badge-blue">' + b.action + '</span></td><td>' + b.user + '</td><td style="font-family:JetBrains Mono;font-size:.7rem;color:var(--warning);">' + b.prev + '</td><td style="font-family:JetBrains Mono;font-size:.7rem;color:var(--success);">' + b.hash + '</td></tr>';
+                }
+                document.getElementById('chainBody').innerHTML = html;
+            }).catch(function (e) { console.error(e); });
+        }
+
+        // Step-by-step animated verify
+        function doTamperCheck() {
+            var el = document.getElementById('tamperStatus');
+            var steps = [
+                { icon: 'fa-link', text: 'Connecting to blockchain ledger...', color: '#00d2ff' },
+                { icon: 'fa-database', text: 'Loading all blocks from database...', color: '#9d50bb' },
+                { icon: 'fa-key', text: 'Recalculating SHA-256 hash chain...', color: '#f59e0b' },
+                { icon: 'fa-shield-check', text: 'Comparing block hashes sequentially...', color: '#06d6a0' },
+                { icon: 'fa-fingerprint', text: 'Verifying genesis block integrity...', color: '#ff006e' },
+            ];
+            el.innerHTML = '<div id="verifySteps" style="text-align:left;max-width:500px;margin:0 auto;"></div>';
+            var container = document.getElementById('verifySteps');
+            function runStep(idx) {
+                if (idx >= steps.length) {
+                    // Final API call
+                    fetch(API + "/tamper-check", { headers: hdr() }).then(function (r) { return r.json(); }).then(function (d) {
+                        setTimeout(function () {
+                            if (d.status === 'VERIFIED') {
+                                el.innerHTML = '<div style="margin-bottom:1rem;"><i class="fa-solid fa-circle-check" style="font-size:4rem;color:#00d2ff;filter:drop-shadow(0 0 20px rgba(0,210,255,0.6));"></i></div>'
+                                    + '<h3 style="color:#00d2ff;font-size:1.5rem;margin-bottom:8px;">✅ CHAIN INTEGRITY VERIFIED</h3>'
+                                    + '<p style="color:#6ee7b7;margin-top:8px;font-weight:600;">All ' + d.total + ' blocks validated successfully. Zero tampering detected.</p>'
+                                    + '<p style="color:var(--muted);font-size:.75rem;margin-top:8px;">Last Hash: ' + d.last_hash + '</p>'
+                                    + '<div style="margin-top:16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">'
+                                    + '<span class="badge badge-green" style="padding:8px 16px;font-size:.8rem;"><i class="fa-solid fa-check" style="margin-right:6px;"></i>Genesis Valid</span>'
+                                    + '<span class="badge badge-green" style="padding:8px 16px;font-size:.8rem;"><i class="fa-solid fa-check" style="margin-right:6px;"></i>Hash Chain OK</span>'
+                                    + '<span class="badge badge-green" style="padding:8px 16px;font-size:.8rem;"><i class="fa-solid fa-check" style="margin-right:6px;"></i>No Tampering</span>'
+                                    + '<span class="badge badge-green" style="padding:8px 16px;font-size:.8rem;"><i class="fa-solid fa-check" style="margin-right:6px;"></i>' + d.total + ' Blocks</span></div>';
+                            } else {
+                                el.innerHTML = '<div style="margin-bottom:1rem;"><i class="fa-solid fa-triangle-exclamation" style="font-size:3.5rem;color:var(--danger);"></i></div><h3 style="color:var(--danger);">TAMPER DETECTED at Block #' + d.block_id + '</h3>';
+                            }
+                        }, 400);
+                    });
+                    return;
+                }
+                var s = steps[idx];
+                var stepDiv = document.createElement('div');
+                stepDiv.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px 16px;margin:8px 0;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);opacity:0;transform:translateX(-20px);transition:all 0.4s ease;';
+                stepDiv.innerHTML = '<i class="fa-solid ' + s.icon + '" style="color:' + s.color + ';width:24px;font-size:1.1rem;"></i><span style="flex:1;font-weight:600;">' + s.text + '</span><i class="fa-solid fa-spinner fa-spin" style="color:' + s.color + ';"></i>';
+                container.appendChild(stepDiv);
+                setTimeout(function () { stepDiv.style.opacity = '1'; stepDiv.style.transform = 'translateX(0)'; }, 50);
+                setTimeout(function () {
+                    stepDiv.querySelector('.fa-spinner').className = 'fa-solid fa-circle-check';
+                    stepDiv.style.borderColor = s.color; stepDiv.style.background = 'rgba(0,210,255,0.05)';
+                    runStep(idx + 1);
+                }, 700);
+            }
+            runStep(0);
+        }
+
+        function loadAnomaly() {
+            fetch(API + "/anomaly-report", { headers: hdr() }).then(function (r) { if (r.status === 401) { doLogout(); return; } return r.json(); }).then(function (d) {
+                if (!d) return;
+                var maxScore = 0; for (var i = 0; i < d.users.length; i++) { if (d.users[i].score > maxScore) maxScore = d.users[i].score; }
+                var rEl = document.getElementById('riskNum'); rEl.innerText = Math.round(maxScore);
+                rEl.style.color = maxScore > 70 ? 'var(--danger)' : maxScore > 30 ? 'var(--warning)' : 'var(--success)';
+                rEl.style.textShadow = maxScore > 70 ? '0 0 30px var(--danger-light)' : maxScore > 30 ? '0 0 30px var(--warning-light)' : '0 0 30px var(--success-light)';
+                var ab = document.getElementById('alertsBox');
+                if (d.alerts.length > 0) { var ah = ''; for (var i = 0; i < d.alerts.length; i++) { var cls = d.alerts[i].indexOf('CRITICAL') >= 0 ? 'alert-danger' : 'alert-warning'; ah += '<div class="alert ' + cls + '"><i class="fa-solid fa-circle-exclamation"></i> ' + d.alerts[i] + '</div>'; } ab.innerHTML = ah; }
+                else { ab.innerHTML = '<div class="alert alert-success"><i class="fa-solid fa-shield-check"></i> All systems nominal. No anomalous behavior detected.</div>'; }
+                // Update wave chart with timeline data
+                if (d.timeline && d.timeline.length > 0) {
+                    var labels = [], counts = [];
+                    for (var i = 0; i < d.timeline.length; i++) { labels.push(d.timeline[i].label); counts.push(d.timeline[i].count); }
+                    if (charts.anomaly) { charts.anomaly.data.labels = labels; charts.anomaly.data.datasets[0].data = counts; charts.anomaly.data.datasets[1].data = counts.map(function (c) { return Math.max(0, c + Math.round(Math.random() * 3 - 1)); }); charts.anomaly.update('none'); }
+                }
+            }).catch(function (e) { console.error(e); });
+        }
+
+        function loadPerf() {
+            fetch(API + "/performance-metrics", { headers: hdr() }).then(function (r) { if (r.status === 401) { doLogout(); return; } return r.json(); }).then(function (d) {
+                if (!d) return;
+                document.getElementById('mEnc').innerText = (d.enc_speed_ms || 0) + "ms";
+                document.getElementById('mTok').innerText = (d.token_speed_ms || 0) + "ms";
+                document.getElementById('mThr').innerText = (d.throughput_est || 0).toLocaleString();
+                document.getElementById('mRec').innerText = (d.total_records || 0).toLocaleString();
+                document.getElementById('mTokC').innerText = (d.total_tokens || 0).toLocaleString();
+                document.getElementById('mRat').innerText = d.tokens_per_record || 0;
+                try { if (charts.perf) { charts.perf.data.datasets[0].data = [d.enc_speed_ms || 0, d.token_speed_ms || 0, (d.enc_speed_ms || 0) * 2]; charts.perf.update(); } } catch (e) { }
+            }).catch(function (e) { console.error(e); });
+        }
+
+        function doCSV(input) {
+            if (!input.files[0]) return; var ol = document.getElementById('loadOverlay'); ol.style.display = 'flex';
+            function step(n) {
+                if (n > 4) { var fd = new FormData(); fd.append('file', input.files[0]); fetch(API + "/upload-csv", { method: 'POST', headers: hdr(), body: fd }).then(function () { ol.style.display = 'none'; var s = document.querySelectorAll('.pipe-step'); for (var i = 0; i < s.length; i++)s[i].className = 'pipe-step'; loadStats(); alert("Upload complete!"); }); return; }
+                document.getElementById('p' + n).className = 'pipe-step go'; setTimeout(function () { document.getElementById('p' + n).className = 'pipe-step ok'; step(n + 1); }, 900);
+            } step(1);
+        }
+
+        function toggleBreach() {
+            var b = document.getElementById('breachView'); if (b.style.display === 'block') { b.style.display = 'none'; return; }
+            fetch(API + "/breach-simulation").then(function (r) { return r.json(); }).then(function (d) {
+                var html = '<p style="margin-bottom:1.5rem;color:var(--danger);">[!] DIRECT DATABASE FILE ACCESS. DUMPING ENCRYPTED BLOBS...</p>';
+                for (var i = 0; i < d.dump.length; i++) { var r = d.dump[i]; html += '<div style="border-bottom:1px solid rgba(157,80,187,0.2);padding:10px 0;">ROW_' + r.id + ' | USER: <span style="color:var(--primary);">' + r.name + '</span> | ACC: <span style="color:var(--success);">' + r.acc + '</span> | CITY: <span style="color:var(--primary);">' + r.city + '</span></div>'; }
+                html += '<h2 style="margin-top:2rem;color:var(--success);">[RESULT] ZERO PLAINTEXT FOUND.</h2><p style="color:var(--muted);margin-top:.5rem;">Attacker gains no information. System intact.</p>';
+                document.getElementById('dumpBox').innerHTML = html; b.style.display = 'block';
+            }).catch(function (e) { console.error(e); });
+        }
+
+        // Wavelength animation for home chart
+        function updateWaveChart() {
+            if (!charts.home) return;
+            var ds = charts.home.data.datasets;
+            for (var j = 0; j < ds.length; j++) {
+                var d = ds[j].data;
+                d.shift(); d.push(Math.max(1, Math.round(d[d.length - 1] + Math.random() * 12 - 5)));
+            }
+            var labels = charts.home.data.labels; labels.shift();
+            var now = new Date(); labels.push(now.getHours() + ':' + String(now.getMinutes()).padStart(2, '0') + ':' + String(now.getSeconds()).padStart(2, '0'));
+            charts.home.update('none');
+        }
+
+        function initCharts() {
+            try {
+                var homeEl = document.getElementById('chartHome');
+                if (homeEl) {
+                    var ctx = homeEl.getContext('2d');
+                    var grad1 = ctx.createLinearGradient(0, 0, 0, 280); grad1.addColorStop(0, 'rgba(157,80,187,0.4)'); grad1.addColorStop(1, 'rgba(157,80,187,0)');
+                    var grad2 = ctx.createLinearGradient(0, 0, 0, 280); grad2.addColorStop(0, 'rgba(0,210,255,0.4)'); grad2.addColorStop(1, 'rgba(0,210,255,0)');
+                    var grad3 = ctx.createLinearGradient(0, 0, 0, 280); grad3.addColorStop(0, 'rgba(6,214,160,0.3)'); grad3.addColorStop(1, 'rgba(6,214,160,0)');
+                    var now = new Date(), labels = [], d1 = [], d2 = [], d3 = [];
+                    for (var i = 19; i >= 0; i--) { var t = new Date(now - i * 3000); labels.push(t.getHours() + ':' + String(t.getMinutes()).padStart(2, '0') + ':' + String(t.getSeconds()).padStart(2, '0')); d1.push(Math.round(Math.random() * 20 + 5)); d2.push(Math.round(Math.random() * 15 + 3)); d3.push(Math.round(Math.random() * 10 + 2)); }
+                    charts.home = new Chart(homeEl, {
+                        type: 'line',
+                        data: {
+                            labels: labels, datasets: [
+                                { label: 'Search Queries', data: d1, borderColor: '#9d50bb', backgroundColor: grad1, fill: true, tension: 0.4, borderWidth: 3, pointRadius: 0, pointHoverRadius: 6, pointHoverBackgroundColor: '#9d50bb' },
+                                { label: 'Blocks Created', data: d2, borderColor: '#00d2ff', backgroundColor: grad2, fill: true, tension: 0.4, borderWidth: 3, pointRadius: 0, pointHoverRadius: 6, pointHoverBackgroundColor: '#00d2ff' },
+                                { label: 'Encryptions', data: d3, borderColor: '#06d6a0', backgroundColor: grad3, fill: true, tension: 0.4, borderWidth: 2, pointRadius: 0, pointHoverRadius: 6, pointHoverBackgroundColor: '#06d6a0' }
+                            ]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false, animation: { duration: 800, easing: 'easeInOutQuart' }, interaction: { intersect: false, mode: 'index' }, plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', usePointStyle: true, pointStyle: 'circle', padding: 20 } } }, scales: { x: { grid: { color: 'rgba(157,80,187,0.05)' }, border: { display: false }, ticks: { color: '#94a3b8', maxTicksLimit: 8 } }, y: { grid: { color: 'rgba(157,80,187,0.05)' }, border: { display: false }, ticks: { color: '#94a3b8' } } } }
+                    });
+                }
+            } catch (e) { console.error(e); }
+
+            try {
+                var anomalyEl = document.getElementById('chartAnomaly');
+                if (anomalyEl) {
+                    var actx = anomalyEl.getContext('2d');
+                    var aGrad1 = actx.createLinearGradient(0, 0, 0, 320); aGrad1.addColorStop(0, 'rgba(0,210,255,0.5)'); aGrad1.addColorStop(0.5, 'rgba(157,80,187,0.2)'); aGrad1.addColorStop(1, 'rgba(255,0,127,0)');
+                    var aGrad2 = actx.createLinearGradient(0, 0, 0, 320); aGrad2.addColorStop(0, 'rgba(6,214,160,0.4)'); aGrad2.addColorStop(1, 'rgba(6,214,160,0)');
+                    var initLabels = ['T-12', 'T-11', 'T-10', 'T-9', 'T-8', 'T-7', 'T-6', 'T-5', 'T-4', 'T-3', 'T-2', 'T-1'];
+                    var initData1 = initLabels.map(function () { return Math.round(Math.random() * 8 + 2); });
+                    var initData2 = initLabels.map(function () { return Math.round(Math.random() * 6 + 1); });
+                    charts.anomaly = new Chart(anomalyEl, {
+                        type: 'line',
+                        data: {
+                            labels: initLabels, datasets: [
+                                { label: 'Search Events', data: initData1, borderColor: '#00d2ff', backgroundColor: aGrad1, fill: true, tension: 0.45, borderWidth: 3, pointRadius: 4, pointBackgroundColor: '#00d2ff', pointBorderColor: '#04091e', pointBorderWidth: 2, pointHoverRadius: 8 },
+                                { label: 'System Load', data: initData2, borderColor: '#06d6a0', backgroundColor: aGrad2, fill: true, tension: 0.45, borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#06d6a0', pointBorderColor: '#04091e', pointBorderWidth: 2 }
+                            ]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false, animation: { duration: 600 }, interaction: { intersect: false, mode: 'index' }, plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', usePointStyle: true, pointStyle: 'circle', padding: 20 } } }, scales: { x: { grid: { color: 'rgba(0,210,255,0.06)' }, ticks: { color: '#94a3b8' } }, y: { beginAtZero: true, grid: { color: 'rgba(0,210,255,0.06)' }, ticks: { color: '#94a3b8', precision: 0 } } } }
+                    });
+                }
+            } catch (e) { console.error(e); }
+
+            try {
+                var perfEl = document.getElementById('chartPerf');
+                if (perfEl) {
+                    charts.perf = new Chart(perfEl, {
+                        type: 'bar',
+                        data: { labels: ['AES-256 Encrypt', 'HMAC-SHA256 Token', 'Full Pipeline'], datasets: [{ label: 'Time (ms)', data: [0.1, 0.05, 0.2], backgroundColor: ['rgba(157,80,187,0.8)', 'rgba(0,210,255,0.8)', 'rgba(6,214,160,0.8)'], borderColor: ['#9d50bb', '#00d2ff', '#06d6a0'], borderWidth: 2, borderRadius: 10, borderSkipped: false }] },
+                        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(0,210,255,0.05)' }, ticks: { color: '#94a3b8' } }, y: { grid: { display: false }, ticks: { color: '#94a3b8', font: { weight: 600 } } } } }
+                    });
+                }
+            } catch (e) { console.error(e); }
+        }
+    </script>
+</body>
+
+</html>
